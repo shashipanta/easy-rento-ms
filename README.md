@@ -3,8 +3,9 @@
 This is a muti-module **Spring Boot monorepo project** managed with **Maven**.
 It contains multiple microservices and shared libraries organized under a single repository
 
---
+---
 ## 📁 Project Structure
+```
 EASY-RENTO/
 |-- pom.xml                 # Parent POM (manages modules and shared config)
 |== config-server/          # Microservice for centralized config repository
@@ -13,8 +14,8 @@ EASY-RENTO/
 |-- shared/                 # Shared code and utilities used by services
 |-- auth-service/           # Microservice for user and AUTH related operations
 |-- notification-service    # Microservice for sending SMS / emails / real time notifications
-
---
+```
+---
 ## 🧪 Getting Started
 To run the project, following prerequisites should be looked upon:
 
@@ -32,7 +33,7 @@ To clean and build all modules:
 mvn clean install
 ```
 
---
+---
 ## Development
 Each service is a standalone Spring Boot Application so
 ```bash

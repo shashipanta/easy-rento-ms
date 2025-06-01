@@ -1,0 +1,134 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.easyrento</groupId>
+    <artifactId>EASY-RENTO</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <description>Base package for easy-rento mono repo</description>
+
+    <url>https://github.com/shashipanta/easy-rento-ms</url>
+    <licenses>
+        <license/>
+    </licenses>
+    <developers>
+        <developer>
+            <id>Shashi</id>
+            <name>Shashi Panta</name>
+            <email>shashipanta57@gmail.com</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/shashipanta/easy-rento-ms.git</connection>
+        <developerConnection>scm:git@github.com:shashipanta/easy-rento-ms.git</developerConnection>
+        <url>https://github.com/shashipanta/easy-rento-ms.git</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <!-- Release jar to github: Github packages   -->
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/shashipanta/easy-rento-ms</url>
+        </repository>
+    </distributionManagement>
+
+    <modules>
+        <module>discovery-server</module>
+        <module>auth-server</module>
+        <module>easy-rento</module>
+    </modules>
+
+    <!-- common custom properties like java-version, encoding, spring-boot version -->
+    <properties>
+        <java.version>17</java.version>
+        <spring.boot.version>3.5.0</spring.boot.version>
+        <spring-cloud.version>2025.0.0-RC1</spring-cloud.version>
+    </properties>
+
+    <dependencies>
+        <!-- common dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- For spring boot versions and other library versions -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring.boot.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- Common maven plugins -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.0.1</version>
+                <configuration>
+                    <tagNameFormat>@{project.version}</tagNameFormat>
+                    <pushChanges>true</pushChanges>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <basedir/>
+                    <mainOutputDirectory/>
+                    <mojoStatusPath/>
+                    <outputDirectory/>
+                    <projectArtifact/>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+
+</project>
