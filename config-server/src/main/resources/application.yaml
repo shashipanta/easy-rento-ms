@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native # Use local file instead of git
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:./config-server/config-repo
+        default-profile: native
+
+server:
+  port: 8888
+
+

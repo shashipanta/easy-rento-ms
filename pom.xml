@@ -39,6 +39,7 @@
 
     <modules>
         <module>discovery-server</module>
+        <module>config-server</module>
         <module>auth-server</module>
         <module>easy-rento</module>
     </modules>
