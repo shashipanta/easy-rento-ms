@@ -4,7 +4,7 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.easyrento</groupId>
-    <artifactId>EASY-RENTO</artifactId>
+    <artifactId>EASY-RENTO-MS</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <description>Base package for easy-rento mono repo</description>
