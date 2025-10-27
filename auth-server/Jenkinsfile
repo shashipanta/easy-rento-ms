@@ -34,7 +34,7 @@ pipeline {
                     branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
                     userRemoteConfigs: [[
                         url: 'git@github.com:shashipanta/easy-rento-ms.git',
-                        credentialsId: 'github'
+                        credentialsId: 'github-ssh'
                     ]]
                 ])
             }
