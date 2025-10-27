@@ -1,8 +1,10 @@
 pipeline {
-    agent {
-        // Use a Jenkins agent with Docker installed
-        label 'docker-agent'
-    }
+     agent {
+        docker {
+           image 'maven:3.9.4-openjdk-17'
+           args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+     }
 
     parameters {
         booleanParam(
@@ -59,8 +61,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 dir("${env.SERVICE_NAME}") {
-                    script {
-                        docker.build("${env.SERVICE_NAME}:latest", ".")
+                    steps {
+                       sh 'docker build -t auth-server:latest .'
                     }
                 }
             }
