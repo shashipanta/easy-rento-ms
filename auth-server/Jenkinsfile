@@ -40,6 +40,12 @@ pipeline {
             }
         }
 
+        stage('Debug workspace') {
+            steps {
+                sh 'ls -la'
+            }
+        }
+
         stage('Build JAR') {
             steps {
                 sh './mvnw clean package -DskipTests'
