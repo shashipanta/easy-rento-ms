@@ -1,10 +1,5 @@
 pipeline {
-     agent {
-        docker {
-             image 'maven:3.9.3-eclipse-temurin-17' // Maven + JDK
-             args '-v /var/run/docker.sock:/var/run/docker.sock' // give access to host Docker
-        }
-     }
+    agent any
 
     parameters {
         booleanParam(
@@ -15,24 +10,28 @@ pipeline {
         string(
             name: 'GIT_BRANCH',
             defaultValue: 'main',
-            description: 'Git branch to build'
+            description: 'Git branch to fetch latest code from'
         )
         string(
             name: 'PORT',
             defaultValue: '8091',
-            description: 'Port to run service locally'
+            description: 'Port on which the application shall run'
+        )
+        string(
+            name: 'SERVICE_FOLDER',
+            defaultValue: 'auth-server',
+            description: 'Microservice folder inside the main mono-repo'
         )
     }
 
     environment {
-        SERVICE_NAME = "${env.WORKSPACE.split('/').last()}"
+        SERVICE_NAME = "${params.SERVICE_FOLDER}"
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Checkout Latest Code') {
             steps {
-                echo "Checking out branch ${params.GIT_BRANCH}"
+                echo "Fetching latest code from branch ${params.GIT_BRANCH}..."
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
@@ -44,15 +43,16 @@ pipeline {
             }
         }
 
-        stage('Debug Workspace') {
+        stage('Debug workspace') {
             steps {
-                sh 'pwd && ls -la'
+                sh 'ls -la'
             }
         }
 
         stage('Build JAR') {
             steps {
-                dir("${env.SERVICE_NAME}") {   // go into microservice folder
+                dir("${params.SERVICE_FOLDER}") {
+                    echo "Building JAR for ${params.SERVICE_FOLDER}..."
                     sh './mvnw clean package -DskipTests'
                 }
             }
@@ -60,9 +60,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir("${env.SERVICE_NAME}") {
-                    steps {
-                        sh "docker build -t ${env.SERVICE_NAME}:latest ."
+                dir("${params.SERVICE_FOLDER}") {
+                    echo "Building Docker image for ${SERVICE_NAME}..."
+                    script {
+                         docker.build("${env.SERVICE_NAME}:latest")
                     }
                 }
             }
@@ -71,21 +72,22 @@ pipeline {
         stage('Deploy Locally (Optional)') {
             when { expression { params.DEPLOY == true } }
             steps {
-                dir("${env.SERVICE_NAME}") {
+                dir("${params.SERVICE_FOLDER}") {
                     script {
-                        def port = params.PORT
+                        def envVars = [:]
                         if (fileExists('.env')) {
-                            def envVars = readFile('.env').split('\n')
+                            envVars = readFile('.env').split('\n')
                                 .findAll { it.contains('=') }
                                 .collect { it.split('=') }
                                 .collectEntries { [(it[0]): it[1]] }
-                            port = envVars['PORT'] ?: params.PORT
                         }
 
+                        def port = envVars['PORT'] ?: params.PORT
+
                         sh """
-                            docker stop ${env.SERVICE_NAME} || true
-                            docker rm ${env.SERVICE_NAME} || true
-                            docker run -d --name ${env.SERVICE_NAME} -p ${port}:${port} --env-file .env ${env.SERVICE_NAME}:latest
+                            docker stop ${SERVICE_NAME} || true
+                            docker rm ${SERVICE_NAME} || true
+                            docker run -d --name ${SERVICE_NAME} -p ${port}:${port} --env-file .env ${SERVICE_NAME}:latest
                         """
                     }
                 }
@@ -94,7 +96,7 @@ pipeline {
     }
 
     post {
-        success { echo "✅ ${env.SERVICE_NAME} Docker image built and deployed!" }
-        failure { echo "❌ ${env.SERVICE_NAME} build/deploy failed!" }
+        success { echo "✅ ${SERVICE_NAME} Docker image built and deployed!" }
+        failure { echo "❌ ${SERVICE_NAME} build/deploy failed!" }
     }
 }
