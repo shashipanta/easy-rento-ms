@@ -1,5 +1,8 @@
 pipeline {
-    agent any
+    agent {
+        // Use a Jenkins agent with Docker installed
+        label 'docker-agent'
+    }
 
     parameters {
         booleanParam(
@@ -10,28 +13,24 @@ pipeline {
         string(
             name: 'GIT_BRANCH',
             defaultValue: 'main',
-            description: 'Git branch to fetch latest code from'
+            description: 'Git branch to build'
         )
         string(
             name: 'PORT',
             defaultValue: '8091',
-            description: 'Port on which the application shall run'
-        )
-        string(
-            name: 'SERVICE_FOLDER',
-            defaultValue: 'auth-server',
-            description: 'Microservice folder inside the main mono-repo'
+            description: 'Port to run service locally'
         )
     }
 
     environment {
-        SERVICE_NAME = "${params.SERVICE_FOLDER}"
+        SERVICE_NAME = "${env.WORKSPACE.split('/').last()}"
     }
 
     stages {
-        stage('Checkout Latest Code') {
+
+        stage('Checkout Code') {
             steps {
-                echo "Fetching latest code from branch ${params.GIT_BRANCH}..."
+                echo "Checking out branch ${params.GIT_BRANCH}"
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
@@ -43,16 +42,15 @@ pipeline {
             }
         }
 
-        stage('Debug workspace') {
+        stage('Debug Workspace') {
             steps {
-                sh 'ls -la'
+                sh 'pwd && ls -la'
             }
         }
 
         stage('Build JAR') {
             steps {
-                dir("${params.SERVICE_FOLDER}") {
-                    echo "Building JAR for ${params.SERVICE_FOLDER}..."
+                dir("${env.SERVICE_NAME}") {   // go into microservice folder
                     sh './mvnw clean package -DskipTests'
                 }
             }
@@ -60,9 +58,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir("${params.SERVICE_FOLDER}") {
-                    echo "Building Docker image for ${SERVICE_NAME}..."
-                    sh "docker build -t ${SERVICE_NAME}:latest ."
+                dir("${env.SERVICE_NAME}") {
+                    script {
+                        docker.build("${env.SERVICE_NAME}:latest", ".")
+                    }
                 }
             }
         }
@@ -70,22 +69,21 @@ pipeline {
         stage('Deploy Locally (Optional)') {
             when { expression { params.DEPLOY == true } }
             steps {
-                dir("${params.SERVICE_FOLDER}") {
+                dir("${env.SERVICE_NAME}") {
                     script {
-                        def envVars = [:]
+                        def port = params.PORT
                         if (fileExists('.env')) {
-                            envVars = readFile('.env').split('\n')
+                            def envVars = readFile('.env').split('\n')
                                 .findAll { it.contains('=') }
                                 .collect { it.split('=') }
                                 .collectEntries { [(it[0]): it[1]] }
+                            port = envVars['PORT'] ?: params.PORT
                         }
 
-                        def port = envVars['PORT'] ?: params.PORT
-
                         sh """
-                            docker stop ${SERVICE_NAME} || true
-                            docker rm ${SERVICE_NAME} || true
-                            docker run -d --name ${SERVICE_NAME} -p ${port}:${port} --env-file .env ${SERVICE_NAME}:latest
+                            docker stop ${env.SERVICE_NAME} || true
+                            docker rm ${env.SERVICE_NAME} || true
+                            docker run -d --name ${env.SERVICE_NAME} -p ${port}:${port} --env-file .env ${env.SERVICE_NAME}:latest
                         """
                     }
                 }
@@ -94,7 +92,7 @@ pipeline {
     }
 
     post {
-        success { echo "✅ ${SERVICE_NAME} Docker image built and deployed!" }
-        failure { echo "❌ ${SERVICE_NAME} build/deploy failed!" }
+        success { echo "✅ ${env.SERVICE_NAME} Docker image built and deployed!" }
+        failure { echo "❌ ${env.SERVICE_NAME} build/deploy failed!" }
     }
 }
