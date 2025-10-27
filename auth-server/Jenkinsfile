@@ -1,28 +1,31 @@
 pipeline {
     agent any
 
-    // Parameters for manual build
     parameters {
         booleanParam(
-	        name: 'DEPLOY',
-	        defaultValue: true,
-	        description: 'Deploy locally after build?'
-	    )
+            name: 'DEPLOY',
+            defaultValue: true,
+            description: 'Deploy locally after build?'
+        )
         string(
-	        name: 'GIT_BRANCH',
-	        defaultValue: 'main',
-	        description: 'Git branch to fetch latest code from'
-	    )
-	    string(
-	        name: 'PORT',
-	        defaultValue: '8091',
-	        description: 'Port on which application shall run'
-	    )
+            name: 'GIT_BRANCH',
+            defaultValue: 'main',
+            description: 'Git branch to fetch latest code from'
+        )
+        string(
+            name: 'PORT',
+            defaultValue: '8091',
+            description: 'Port on which the application shall run'
+        )
+        string(
+            name: 'SERVICE_FOLDER',
+            defaultValue: 'auth-server',
+            description: 'Microservice folder inside the main mono-repo'
+        )
     }
 
     environment {
-	    // auto-detect service folder name
-        SERVICE_NAME = "${env.WORKSPACE.split('/').last()}"
+        SERVICE_NAME = "${params.SERVICE_FOLDER}"
     }
 
     stages {
@@ -33,7 +36,7 @@ pipeline {
                     $class: 'GitSCM',
                     branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
                     userRemoteConfigs: [[
-                        url: 'git@github.com:shashipanta/easy-rento-ms/auth-server.git',
+                        url: 'git@github.com:shashipanta/easy-rento-ms.git',
                         credentialsId: 'github-ssh'
                     ]]
                 ])
@@ -48,44 +51,50 @@ pipeline {
 
         stage('Build JAR') {
             steps {
-                sh "./mvnw clean package -DskipTests"
+                dir("${params.SERVICE_FOLDER}") {
+                    echo "Building JAR for ${params.SERVICE_FOLDER}..."
+                    sh './mvnw clean package -DskipTests'
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image for ${env.SERVICE_NAME}..."
-                sh "docker build -t ${env.SERVICE_NAME}:latest ."
+                dir("${params.SERVICE_FOLDER}") {
+                    echo "Building Docker image for ${SERVICE_NAME}..."
+                    sh "docker build -t ${SERVICE_NAME}:latest ."
+                }
             }
         }
 
         stage('Deploy Locally (Optional)') {
             when { expression { params.DEPLOY == true } }
             steps {
-                script {
-                    // Read .env file
-                    def envVars = [:]
-                    if (fileExists('.env')) {
-                        envVars = readFile('.env').split('\n')
-                            .findAll { it.contains('=') }
-                            .collect { it.split('=') }
-                            .collectEntries { [(it[0]): it[1]] }
+                dir("${params.SERVICE_FOLDER}") {
+                    script {
+                        def envVars = [:]
+                        if (fileExists('.env')) {
+                            envVars = readFile('.env').split('\n')
+                                .findAll { it.contains('=') }
+                                .collect { it.split('=') }
+                                .collectEntries { [(it[0]): it[1]] }
+                        }
+
+                        def port = envVars['PORT'] ?: params.PORT
+
+                        sh """
+                            docker stop ${SERVICE_NAME} || true
+                            docker rm ${SERVICE_NAME} || true
+                            docker run -d --name ${SERVICE_NAME} -p ${port}:${port} --env-file .env ${SERVICE_NAME}:latest
+                        """
                     }
-
-                    def port = envVars['PORT'] ?: ${params.PORT}
-
-                    sh """
-                        docker stop ${env.SERVICE_NAME} || true
-                        docker rm ${env.SERVICE_NAME} || true
-                        docker run -d --name ${env.SERVICE_NAME} -p ${port}:${port} --env-file .env ${env.SERVICE_NAME}:latest
-                    """
                 }
             }
         }
     }
 
     post {
-        success { echo "✅ ${env.SERVICE_NAME} Docker image built and deployed!" }
-        failure { echo "❌ ${env.SERVICE_NAME} build/deploy failed!" }
+        success { echo "✅ ${SERVICE_NAME} Docker image built and deployed!" }
+        failure { echo "❌ ${SERVICE_NAME} build/deploy failed!" }
     }
 }
