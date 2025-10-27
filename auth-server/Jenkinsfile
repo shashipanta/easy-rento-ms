@@ -1,8 +1,8 @@
 pipeline {
      agent {
         docker {
-           image 'maven:3.9.4-openjdk-17'
-           args '-v /var/run/docker.sock:/var/run/docker.sock'
+             image 'maven:3.9.3-eclipse-temurin-17' // Maven + JDK
+             args '-v /var/run/docker.sock:/var/run/docker.sock' // give access to host Docker
         }
      }
 
@@ -62,7 +62,7 @@ pipeline {
             steps {
                 dir("${env.SERVICE_NAME}") {
                     steps {
-                       sh 'docker build -t auth-server:latest .'
+                        sh "docker build -t ${env.SERVICE_NAME}:latest ."
                     }
                 }
             }
