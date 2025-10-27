@@ -33,7 +33,7 @@ pipeline {
                     $class: 'GitSCM',
                     branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
                     userRemoteConfigs: [[
-                        url: 'git@github.com:shashipanta/easy-rento-ms.git',
+                        url: 'git@github.com:shashipanta/easy-rento-ms/auth-server.git',
                         credentialsId: 'github-ssh'
                     ]]
                 ])
