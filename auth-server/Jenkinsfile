@@ -1,0 +1,61 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'SERVICE_NAME', defaultValue: 'auth-server', description: 'Which microservice to build')
+        booleanParam(name: 'DEPLOY', defaultValue: false, description: 'Deploy after build?')
+        string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to fetch')
+        number(name: 'PORT', defaultValue: 8091, description: 'Port to run the service on')
+    }
+
+    stages {
+        stage('Checkout Latest Code') {
+            steps {
+                echo "Fetching latest code from branch ${params.GIT_BRANCH}..."
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "refs/heads/${params.GIT_BRANCH}"]],
+                    userRemoteConfigs: [[url: 'git@github.com:shashipanta/easy-rento-ms.git', credentialsId: 'github']]
+                ])
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir("${params.SERVICE_NAME}") {
+                    echo "Building ${params.SERVICE_NAME}..."
+                    sh './mvnw clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                dir("${params.SERVICE_NAME}") {
+                    echo "Building Docker image ${params.SERVICE_NAME}:latest..."
+                    sh "docker build -t ${params.SERVICE_NAME}:latest ."
+                }
+            }
+        }
+
+        stage('Deploy (Optional)') {
+            when { expression { params.DEPLOY == true } }
+            steps {
+                sh """
+                    docker stop ${params.SERVICE_NAME} || true
+                    docker rm ${params.SERVICE_NAME} || true
+                    docker run -d --name ${params.SERVICE_NAME} -p 8080:8080 ${params.SERVICE_NAME}:latest
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ ${params.SERVICE_NAME} built and deployed successfully!"
+        }
+        failure {
+            echo "❌ ${params.SERVICE_NAME} build/deploy failed!"
+        }
+    }
+}
